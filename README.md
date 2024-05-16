@@ -1,5 +1,15 @@
 # Frank-Wolfe Method For Set-Covering LPs
 
+## NOTES
+
+In order for the code presented below to run, pyscipopt is needed. Anyway, the Frank-Wolfe algorithm can be tested separately, allowing its execution without pyscipopt. In order to test the Frank-Wolfe Method alone, you can use 
+
+```
+$ gcc main.c -o main -Ofast
+$ ./main <filepath> <K>
+```
+where `filepath` is the path of the file that contains the matrix associated with the problem and `K` represents the number of iterations of the algorithm.
+
 ## USAGES
 The following commands can be used to test the implementation. They provide a simple way to run both the Simplex Method (SCIP with pyscipopt) and my implementation of the Frank-Wolfe Method. 
 ```
