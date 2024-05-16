@@ -1,1 +1,1 @@
-# Frank-Wolfe_Method_For_Set_Covering_LPs
+# Frank-Wolfe Method For Set-Covering LPs
