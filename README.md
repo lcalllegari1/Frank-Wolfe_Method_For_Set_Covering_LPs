@@ -24,6 +24,8 @@ $ python3 main.py <M> <N> <P> [<filename>]
 
 where `M` represents the number of items of the problem (i.e. the number of rows of the matrix), `N` represents the number of sets of the problem (i.e. the number of columns of the matrix) and `P` represents the probability of ones in the matrix associated with the problem. The optional argument `filename` can be used to specify the name of the file that will be used to store the matrix, so that you can refer to it using the first command. If `filename` is not provided, the default value `random.txt` will be used. This file is overwritten every time the command is invoked without the optional argument (or when the optional argument is exactly `random.txt`, of course).
 
+In order to change the number of iterations of the Frank-Wolfe Method, you can edit the value of the variable `K` at the beginning of `main.py`.
+
 ## Frank-Wolfe Implementation (C)
 
 For this (first) implementation I did not use dynamic memory allocation. All operations are made on the stack for maximum efficiency (I hope). For this reason, all functions used to implement the algorithm are void. All the values that are passed (by pointer) to those functions and that are modified inside the function (e.g. used as return values), are marked with a leading underscore character in order to distinguish them from the other parameters. 

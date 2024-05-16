@@ -4,7 +4,7 @@ import dataset
 from solver import solve
 
 PATH = "datasets/"
-K = 100
+K = 1000
 
 def main(args):
     if len(args) != 2 and len(args) != 4 and len(args) != 5:
