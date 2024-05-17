@@ -30,4 +30,17 @@ In order to change the number of iterations of the Frank-Wolfe Method, you can e
 
 For this (first) implementation I did not use dynamic memory allocation. All operations are made on the stack for maximum efficiency (I hope). For this reason, all functions used to implement the algorithm are void. All the values that are passed (by pointer) to those functions and that are modified inside the function (e.g. used as return values), are marked with a leading underscore character in order to distinguish them from the other parameters. 
 
+## EXAMPLES
 
+```
+$ python3 main.py random.txt
+```
+
+```
+$ python3 main.py 100 10 0.1 mydataset.txt
+```
+
+```
+$ gcc main.c -o main -Ofast
+$ ./main datasets/random.txt 1000
+```
