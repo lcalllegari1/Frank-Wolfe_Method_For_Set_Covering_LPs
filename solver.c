@@ -39,21 +39,23 @@ void read(const char * const path) {
         exit(-1);
     }
 
+    int t;
+
     initialize();
-    fscanf(file, "%d %d %d", &M, &N, &NNZ); 
+    t = fscanf(file, "%d %d %d", &M, &N, &NNZ); 
 
     for (int i = 0; i <= M; i++) {
-        fscanf(file, "%d", A->row_indexes + i);
+        t = fscanf(file, "%d", A->row_indexes + i);
     }
     for (int i = 0; i < NNZ; i++) {
-        fscanf(file, "%d", A->col_indexes + i);
+        t = fscanf(file, "%d", A->col_indexes + i);
     }
 
     for (int i = 0; i <= N; i++) {
-        fscanf(file, "%d", T->row_indexes + i);
+        t = fscanf(file, "%d", T->row_indexes + i);
     }
     for (int i = 0; i < NNZ; i++) {
-        fscanf(file, "%d", T->col_indexes + i);
+        t = fscanf(file, "%d", T->col_indexes + i);
     }
 
     fclose(file);
