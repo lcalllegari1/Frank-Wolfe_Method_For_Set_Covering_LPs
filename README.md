@@ -1,46 +1,86 @@
 # Frank-Wolfe Method For Set-Covering LPs
 
-## NOTES
+# DATASET GENERATION
 
-In order for the code presented below to run, pyscipopt is needed. Anyway, the Frank-Wolfe algorithm can be tested separately, allowing its execution without pyscipopt. In order to test the Frank-Wolfe Method alone, you can use 
-
-```
-$ gcc main.c -o main -Ofast
-$ ./main <filepath> <K>
-```
-where `filepath` is the path of the file that contains the matrix associated with the problem and `K` represents the number of iterations of the algorithm.
-
-## USAGES
-The following commands can be used to test the implementation. They provide a simple way to run both the Simplex Method (SCIP with pyscipopt) and my implementation of the Frank-Wolfe Method. 
-```
-$ python3 main.py <filename>
-```
-where `filename` must be a valid name for a file located in the `datasets` directory. This command
-runs the algorithm on the matrix read from `filename`.
+The file `datagen.py` can be used to generate datasets. The command 
 
 ```
-$ python3 main.py <M> <N> <P> [<filename>]
+python3 datagen.py <size> <rows> <cols> <prob>
 ```
 
-where `M` represents the number of items of the problem (i.e. the number of rows of the matrix), `N` represents the number of sets of the problem (i.e. the number of columns of the matrix) and `P` represents the probability of ones in the matrix associated with the problem. The optional argument `filename` can be used to specify the name of the file that will be used to store the matrix, so that you can refer to it using the first command. If `filename` is not provided, the default value `random.txt` will be used. This file is overwritten every time the command is invoked without the optional argument (or when the optional argument is exactly `random.txt`, of course).
+can be used to generate a dataset with `<size>` instances, each one
+referring to a binary matrix with `<rows>` rows and `<cols>` columns. The
+`<prob>` value represents the probability of ones, and should be a value
+between 0 and 1. For the Set-Covering problem is common to use sparse
+matrices, i.e. matrices with a lot of zero entries.
 
-In order to change the number of iterations of the Frank-Wolfe Method, you can edit the value of the variable `K` at the beginning of `main.py`.
+# FRANK-WOLFE ALGORITHM
 
-## Frank-Wolfe Implementation (C)
+The file `solver.c` implements the Frank-Wolfe algorithm and can be used to
+solve instances of a dataset. Use
 
-For this (first) implementation I did not use dynamic memory allocation. All operations are made on the stack for maximum efficiency (I hope). For this reason, all functions used to implement the algorithm are void. All the values that are passed (by pointer) to those functions and that are modified inside the function (e.g. used as return values), are marked with a leading underscore character in order to distinguish them from the other parameters. 
+```
+gcc solver.c -o solver -Ofast
+```
+
+to compile the code and 
+
+```
+./solver <path/to/dataset/instance/csr.dat> <K>
+```
+
+to run the algorithm on the instance referred to by `csr.dat`. The value
+`<K>` represents the number of iterations of the algorithm. 100-1000 is
+reasonable, +10000 not so much in terms of what is gained.
+
+# SIMPLEX SOLVER
+
+In order to compare the result obtained with FW, you can solve the same
+instance using pyscipopt with the following command.
+
+```
+python3 solver.py <path/to/dataset/instance/mat.dat>
+```
+
+In order for this to work, make sure pyscipopt is available on your system.
 
 ## EXAMPLES
 
-```
-$ python3 main.py random.txt
-```
+Use
 
 ```
-$ python3 main.py 100 10 0.1 mydataset.txt
+python3 datagen.py 1 100 10 0.1 
 ```
 
+to generate a dataset of a single (1) istance, that is, a binary matrix of
+100 rows and 10 columns, with a 0.1 probability of generating ones in the
+process of costructing the matrix.
+
+The default behavior is to save the instance in `datasets/100x10/0.1/1`.
+The folder contains two files, `mat.dat` and `csr.dat`. The first one is
+the binary matrix itself while the second is its CSR (Compressed Sparse
+Row) representation. The matrix file `mat.dat` is used for the simplex
+solver, while the other one serves the Frank-Wolfe algorithm.
+
+Once the dataset has been generated, you can use 
 ```
-$ gcc main.c -o main -Ofast
-$ ./main datasets/random.txt 1000
+gcc solver.c -o solver -Ofast
 ```
+
+to compile the code and 
+
+```
+./solver datasets/100x10/0.1/1/csr.dat 1000
+```
+
+to run the Frank-Wolfe algorithm on the specified instance. Make sure you
+refer to the `csr.dat` file.
+
+You can then use 
+
+```
+python3 solver.py datasets/100x10/0.1/1/mat.dat 
+```
+
+to solve the same istance with the simplex algorithm to compare the results
+and the running times. Make sure you refer to the `mat.dat` file.
