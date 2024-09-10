@@ -8,106 +8,87 @@
 #define MAX_SIZE MAX_ROWS * MAX_COLS
 
 typedef struct {
-    uint32_t *row_indexes;
-    uint32_t *col_indexes;
+    int indices[MAX_SIZE];
+    int pointers[MAX_ROWS + 1];
 } csr_matrix;
 
-uint32_t M = MAX_ROWS; /* number of rows */
-uint32_t N = MAX_COLS; /* number of cols */
+csr_matrix A, T;
 
-uint32_t NNZ = MAX_SIZE; /* number of non-zero elements */
+int m = MAX_ROWS;
+int n = MAX_COLS;
 
-uint32_t a_row_indexes[MAX_ROWS], t_row_indexes[MAX_COLS];
-uint32_t a_col_indexes[MAX_SIZE], t_col_indexes[MAX_SIZE];
-
-csr_matrix a, t;
-
-csr_matrix * const A = &a;
-csr_matrix * const T = &t;
-
-void initialize() {
-    A->row_indexes = a_row_indexes;
-    A->col_indexes = a_col_indexes;
-    T->row_indexes = t_row_indexes;
-    T->col_indexes = t_col_indexes;
-}
+int nnz = MAX_SIZE;
 
 void read(const char * const path) {
-    FILE *file = fopen(path, "r");
-
-    if (file == NULL) {
-        exit(-1);
-    }
-
+    FILE * file = fopen(path, "r");
     int t;
 
-    initialize();
-    t = fscanf(file, "%d %d %d", &M, &N, &NNZ); 
+    t = fscanf(file, "%d %d %d", &m, &n, &nnz);
 
-    for (int i = 0; i <= M; i++) {
-        t = fscanf(file, "%d", A->row_indexes + i);
-    }
-    for (int i = 0; i < NNZ; i++) {
-        t = fscanf(file, "%d", A->col_indexes + i);
-    }
-
-    for (int i = 0; i <= N; i++) {
-        t = fscanf(file, "%d", T->row_indexes + i);
-    }
-    for (int i = 0; i < NNZ; i++) {
-        t = fscanf(file, "%d", T->col_indexes + i);
-    }
+    for (int i = 0; i <= m; i++) 
+        t = fscanf(file, "%d", A.pointers + i);
+    for (int i = 0; i < nnz; i++)
+        t = fscanf(file, "%d", A.indices + i);
+    for (int i = 0; i <= n; i++) 
+        t = fscanf(file, "%d", T.pointers + i);
+    for (int i = 0; i < nnz; i++)
+        t = fscanf(file, "%d", T.indices + i);
 
     fclose(file);
 }
 
-void start_u(double * const u) {
-    for (int i = 0; i < M; i++) {
+
+int row_start(const csr_matrix * const matrix, int row) {
+    return matrix->pointers[row];
+}
+
+int row_end(const csr_matrix * const matrix, int row) {
+    return matrix->pointers[row + 1];
+}
+
+void starting_u(double * const u) {
+    for (int i = 0; i < m; i++) {
         u[i] = 1;
     }
 }
 
 double L(const double * const u, uint8_t * const x) {
     double objective = 0;
+
+    for (int j = 0; j < n; j++) {
+        double result = 0;
+        for (int i = row_start(&T, j); i < row_end(&T, j); i++) {
+            result += u[T.indices[i]];
+        }
+        if (x[j] = (result > 1)) {
+            objective += (1 - result);
+        }
+    }
+
+    for (int i = 0; i < m; i++) {
+        objective += u[i];
+    }
     
-    for (int j = 0; j < M; j++) {
-        objective += u[j];
-    }
-
-    for (int i = 0; i < N; i++) {
-        const int start = T->row_indexes[i];
-        const int end = T->row_indexes[i + 1];
-        double result = 1;
-        for (int j = start; j < end; j++) {
-            result -= u[T->col_indexes[j]];
-        }
-        if (x[i] = (result < 0)) {
-            objective += result;
-        }
-    }
-
     return objective;
 }
 
-void subgradient(const uint8_t * const x, int32_t * const s) {
-    for (int i = 0; i < M; i++) {
-        const int start = A->row_indexes[i];
-        const int end = A->row_indexes[i + 1];
+void subgradient(const uint8_t * const x, int * const s) {
+    for (int i = 0; i < m; i++) {
         s[i] = 1;
-        for (int j = start; j < end; j++) {
-            s[i] -= x[A->col_indexes[j]];
+        for (int j = row_start(&A, i); j < row_end(&A, i); j++) {
+            s[i] -= x[A.indices[j]];
         }
     }
 }
 
-void argmax(const int32_t * const s, uint8_t * const d) {
-    for (int i = 0; i < M; i++) {
+void argmax(const int * const s, uint8_t * const d) {
+    for (int i = 0; i < m; i++) {
         d[i] = (s[i] > 0);
     }
 }
 
 void next_u(double * const u, const uint8_t * const d, double gamma) {
-    for (int i = 0; i < M; i++) {
+    for (int i = 0; i < m; i++) {
         u[i] += gamma * (d[i] - u[i]);
     }
 }
@@ -118,16 +99,11 @@ void update_lower_bound(double * const lower_bound, double candidate) {
     }
 }
 
-void update_upper_bound(
-    double * const upper_bound,
-    double objective, 
-    const int32_t * const s,
-    const uint8_t * const d,
-    const double * const u
+void update_upper_bound(double * const upper_bound, double objective,
+    const int * const s, const uint8_t * const d, const double * const u
 ) {
     double candidate = objective;
-
-    for (int i = 0; i < M; i++) {
+    for (int i = 0; i < m; i++) {
         candidate += s[i] * (d[i] - u[i]);
     }
 
@@ -136,18 +112,12 @@ void update_upper_bound(
     }
 }
 
-int main(int argc, char **argv) {
-    char *path = argv[1];
-    int K = atoi(argv[2]);
-    read(path);
+void solve(int K) {
+    double u[m], objective, lower_bound = 0, upper_bound = 1e9;
+    int s[m]; uint8_t d[m], x[n];
 
-    double objective, lower_bound = 0, upper_bound = 1e9;
-    double u[M];
-    uint8_t x[N], d[M];
-    int32_t s[M];
-
-    start_u(u);
-    clock_t start = clock(), end;
+    clock_t start = clock();
+    starting_u(u);
     for (int k = 0; k < K; k++) {
         objective = L(u, x);
         subgradient(x, s);
@@ -156,10 +126,16 @@ int main(int argc, char **argv) {
         update_upper_bound(&upper_bound, objective, s, d, u);
         next_u(u, d, 2 / ((double) k + 2));
     }
-    end = clock();
+    clock_t end = clock();
+    printf("%f %f %f\n", lower_bound, upper_bound, ((double) (end - start)) / CLOCKS_PER_SEC);
+}
 
-    printf("Lower Bound Value (Frank-Wolfe): %f\n", lower_bound);
-    printf("Upper Bound Value (Frank-Wolfe): %f\n", upper_bound);
-    printf("Gap               (Frank-Wolfe); %f\n", (upper_bound - lower_bound) / upper_bound * 100);
-    printf("Solving Time      (Frank-Wolfe): %f\n", ((double) (end - start)) / CLOCKS_PER_SEC);
+int main(int argc, char **argv) {
+    if (argc != 3) {
+        printf("Usage: $ %s <path> <K>\n", argv[0]);
+        return 0;
+    }
+
+    read(argv[1]);
+    solve(atoi(argv[2]));
 }

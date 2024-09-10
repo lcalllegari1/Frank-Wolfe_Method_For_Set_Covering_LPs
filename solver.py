@@ -1,29 +1,33 @@
-from pyscipopt import Model, quicksum
-from sys import argv
 import numpy as np
 
-def solve(mat):
-    model = build_model(mat)
+from scipy.sparse import csr_matrix
+from pyscipopt import Model, quicksum
+from sys import argv
+
+def solve(model):
     model.hideOutput()
     model.optimize()
-    return (model.getObjVal(), model.getSolvingTime())
+    return model.getObjVal(), model.getSolvingTime()
 
-def build_model(mat):
+def build_model(matrix, m, n):
     model = Model()
-    x = [model.addVar(name=f"x_{j + 1}") for j in range(len(mat[0]))]
-    model.setObjective(quicksum(x[j] for j in range(len(mat[0]))), sense="minimize")
-    for row in mat:
-        model.addCons(quicksum(int(val) * x[j] for j, val in enumerate(row)) >= 1)
+    x = [model.addVar(name=f"x_{j + 1}", vtype="C", lb=0) for j in range(n)]
+    model.setObjective(quicksum(x[j] for j in range(n)), sense="minimize")
+    for i in range(m):
+        model.addCons(quicksum(matrix[i][j] * x[j] for j in range(n)) >= 1)
     return model
 
-def main(argv):
-    if len(argv) != 2:
-        print("Usage: $ python3 solver.py <path/to/dataset/instance/mat.dat>");
-        exit(0)
-    else:
-        mat = np.array([[int(ch) for ch in row] for row in np.loadtxt(argv[1], dtype=str)])
-        obj, tm = solve(mat)
-        print(f"Optimal Value: {obj}, Solving Time: {tm}") 
+def main(filepath):
+    with open(filepath, "r") as file:
+        m, n, _ = map(int, file.readline().split())
+        pointers = list(map(int, file.readline().split()))
+        indices = list(map(int, file.readline().split()))
+    matrix = csr_matrix((np.ones(len(indices)), indices, pointers), (m, n)).toarray()
+    obj, time = solve(build_model(matrix, m, n))
+    print(f"{obj:.6f} {time:.6f}")
 
 if __name__ == "__main__":
-   main(argv)
+    if len(argv) != 2:
+        print(f"Usage: $ python3 {argv[1]} <filepath>")
+    else:
+        main(argv[1])

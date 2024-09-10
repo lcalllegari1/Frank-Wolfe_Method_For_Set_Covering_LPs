@@ -1,72 +1,56 @@
-from os import mkdir, makedirs
+import os
+import numpy as np
+
 from sys import argv
 from scipy.sparse import csr_matrix
 
-import numpy as np
+DATASETS_DIR = "datasets"
 
+def generate_matrix(rows, cols, sparsity):
+    nnz = int(round((1 - sparsity) * rows * cols))
+    matrix = np.zeros((rows, cols), dtype=int)
 
-DATASET_DIR = "datasets"
+    for r in range(rows):
+        matrix[r, np.random.choice(cols)] = 1
 
+    nc = np.where(matrix.sum(axis=0) == 0)[0]
+    for c in nc:
+        matrix[np.random.choice(rows), c] = 1
 
-def generate_matrix(rows, cols, prob):
-    matrix = np.random.choice(
-        a=[0, 1],
-        size=(rows, cols),
-        p=[1 - prob, prob]
-    )
+    remaining_nnz = nnz - np.sum(matrix)
+    if remaining_nnz > 0:
+        zeros = np.argwhere(matrix == 0)
+        selected_indices = zeros[
+            np.random.choice(zeros.shape[0], remaining_nnz, False)
+        ]
+        for r, c in selected_indices:
+            matrix[r, c] = 1
 
-    while True: 
-        null_cols = np.where(matrix.sum(axis=0) == 0)[0]
-        null_rows = np.where(matrix.sum(axis=1) == 0)[0]
+    print(f"generated matrix: {rows}x{cols}, nnz: {nnz}, specified sparsity: {sparsity:.3f}, max sparsity: {1 - rows / (rows * cols):.3f} , actual sparsity: {1 - np.count_nonzero(matrix) / float(np.prod(matrix.shape)):.3f}")   
+    return csr_matrix(matrix)
 
-        if null_cols.size == 0 and null_rows.size == 0:
-            break;
+def save(matrix, path):
+    header = f"{matrix.shape[0]} {matrix.shape[1]} {matrix.nnz}\n"
+    pointers = " ".join(map(str, matrix.indptr)) + "\n"
+    indices = " ".join(map(str, matrix.indices)) + "\n"
+    buffer = f"{header}{pointers}{indices}"
+    pointers = " ".join(map(str, matrix.transpose().tocsr().indptr)) + "\n"
+    indices = " ".join(map(str, matrix.transpose().tocsr().indices)) + "\n"
+    buffer += f"{pointers}{indices}"
+    os.makedirs(path, exist_ok=True)
+    with open(os.path.join(path, "csr_matrix.dat"), "w") as file:
+        file.write(buffer)
 
-        if null_rows.size > 0:
-            matrix[null_rows, :] = np.random.choice(
-                a=[0, 1],
-                size=(null_rows.size, cols),
-                p=[1 - prob, prob]
-            )
-        if null_cols.size > 0:
-            matrix[:, null_cols] = np.random.choice(
-                a=[0, 1],
-                size=(rows, null_cols.size),
-                p=[1 - prob, prob]
-            )
-    
-    return matrix
-
-# create folders
-
-def generate_dataset(size, rows, cols, prob):
-    path = f"{DATASET_DIR}/{rows}x{cols}/{prob}/"
-
+def generate_dataset(size, rows, cols, sparsity):
+    path = f"{DATASETS_DIR}/{rows}x{cols}/{sparsity}/"
     for i in range(size):
-        dir_name = f"{i + 1}"
-        makedirs(path + dir_name, exist_ok=True)
-        matrix = generate_matrix(rows, cols, prob)
-        np.savetxt(path + dir_name + "/mat.dat", matrix, "%d", '')
-        save_csr(matrix, path + dir_name)
+        save(generate_matrix(rows, cols, sparsity), os.path.join(path, f"{i + 1}"))
 
-def save_csr(matrix, path):
-    rows, cols = matrix.shape
-    csr_m = csr_matrix(matrix)
-    csr_t = csr_matrix(matrix.transpose())
-    with open(path + "/csr.dat", "w") as file:
-        file.write(f"{rows} {cols} {csr_m.indices.size}\n")
-        file.write(" ".join(map(str, csr_m.indptr)) + "\n")
-        file.write(" ".join(map(str, csr_m.indices)) + "\n")
-        file.write(" ".join(map(str, csr_t.indptr)) + "\n")
-        file.write(" ".join(map(str, csr_t.indices)) + "\n")
-
-
-def main(args):
-    if len(args) != 5:
-        print(f"Usage: $ python3 {args[0]} <size> <rows> <cols> <prob>")
-    else:
-        generate_dataset(int(args[1]), int(args[2]), int(args[3]), float(args[4]))
-
+def main(size, rows, cols, sparsity):
+    generate_dataset(size, rows, cols, sparsity)
 
 if __name__ == "__main__":
-    main(argv)
+    if len(argv) != 5:
+        print(f"Usage: $ python3 {argv[0]} <size> <rows> <cols> <sparsity>")
+    else:
+        main(int(argv[1]), int(argv[2]), int(argv[3]), float(argv[4]))
