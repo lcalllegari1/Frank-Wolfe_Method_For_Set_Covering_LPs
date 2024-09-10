@@ -27,7 +27,7 @@ to compile the code and
 ./solver <path/to/dataset/instance/csr_matrix.dat> <K>
 ```
 
-to run the algorithm on the instance referred to by `csr.dat`. The value
+to run the algorithm on the instance referred to by `csr_matrix.dat`. The value
 `<K>` represents the number of iterations of the algorithm.
 
 # SIMPLEX SOLVER
